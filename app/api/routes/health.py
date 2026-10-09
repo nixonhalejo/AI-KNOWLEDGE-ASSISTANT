@@ -1,9 +1,12 @@
-from typing import Literal
+from fastapi import APIRouter
+from app.schemas.health import InfoResponse
 
-from pydantic import BaseModel
+router = APIRouter()
 
+@router.get("/health")
+async def health_check():
+    return {"status": "ok"}
 
-class HealthResponse(BaseModel):
-    status: Literal["ok"] = "ok"
-    service: str
-    version: str
+@router.get("/api/v1/info", response_model=InfoResponse)
+async def get_info():
+    return InfoResponse()
