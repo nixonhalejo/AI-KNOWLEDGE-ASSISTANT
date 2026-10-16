@@ -1,17 +1,16 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
+from app.provider.openrouter import OpenRouterProvider
 from app.schemas.chat import ChatRequest, ChatResponse
-from app.services.assistance_service import AssistanceService
+from app.services.assistance_service import AssistantService
 
-router = APIRouter(tags=["chat"])
+router = APIRouter(prefix="/chat", tags=["chat"])
+
+provider = OpenRouterProvider()
+service = AssistantService(provider=provider)
 
 
-@router.post(
-    "/chat",
-    response_model=ChatResponse,
-)
-async def chat(
-    request: ChatRequest,
-    service: AssistanceService = Depends(AssistanceService),
-) -> ChatResponse:
-    return await service.generate_response(request)
+@router.post("", response_model=ChatResponse)
+async def chat(request: ChatRequest) -> ChatResponse:
+    answer = await service.ask(question=request.question)
+    return ChatResponse(answer=answer, provider="openrouter")

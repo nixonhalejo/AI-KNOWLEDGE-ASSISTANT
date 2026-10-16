@@ -29,6 +29,7 @@ class AssistantService:
             },
         ]
 
+        # Asegúrate de incluir la palabra return al inicio de esta línea
         return await self.provider.generate(
             messages=messages,
             temperature=temperature,
