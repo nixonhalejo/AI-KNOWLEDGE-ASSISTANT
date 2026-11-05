@@ -1,5 +1,5 @@
+# app/provider/openrouter.py
 import httpx
-
 from app.core.config import settings
 
 
@@ -12,15 +12,17 @@ class OpenRouterProvider:
 
     async def generate(
         self,
-        messages: list[dict[str, str]],
+        messages: list[dict],
         temperature: float = 0.3,
         top_p: float = 1.0,
         max_tokens: int = 300,
-    ) -> str:
+        tools: list[dict] = None,
+    ) -> dict | str:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
+        
         payload = {
             "model": self.model,
             "messages": messages,
@@ -29,8 +31,14 @@ class OpenRouterProvider:
             "max_tokens": max_tokens,
         }
 
+        # Si se envían herramientas, las inyectamos al payload de OpenRouter
+        if tools:
+            payload["tools"] = tools
+
         async with httpx.AsyncClient(base_url=self.base_url, timeout=30.0) as client:
             response = await client.post("/chat/completions", headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
-            return data["choices"][0]["message"]["content"]
+            
+            message = data["choices"][0]["message"]
+            return message

@@ -12,5 +12,8 @@ service = AssistantService(provider=provider)
 
 @router.post("", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
-    answer = await service.ask(question=request.question)
+    # Pasamos el objeto 'request' completo para que el servicio tenga acceso 
+    # a la pregunta, temperature, max_tokens, etc.
+    answer = await service.ask(request=request)
+    
     return ChatResponse(answer=answer, provider="openrouter")
