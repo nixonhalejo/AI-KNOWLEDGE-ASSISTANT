@@ -16,7 +16,7 @@ async def test_generate_response() -> None:
     request = ChatRequest(question="¿Qué es FastAPI?")
 
     # 3. Llamar al método ask() del servicio
-    answer = await service.ask(question=request.question)
+    answer = await service.ask(request=request)
 
     # 4. Validar la respuesta devuelta por el mock
     assert "FastAPI" in answer

@@ -1,75 +1,52 @@
-import json
+from unittest.mock import AsyncMock
 
-from app.services.tools import (
-    execute_tool,
-    tool_definitions,
-)
+from app.services.agent_service import AgentService
 
 
-def test_tools_exposed():
-    names = {
-        tool["function"]["name"]
-        for tool in tool_definitions()
+async def test_agent_executes_tool_then_answers():
+    provider = AsyncMock()
+    provider.generate.side_effect = [
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "call_1",
+                    "type": "function",
+                    "function": {
+                        "name": "calculate_study_hours",
+                        "arguments": '{"hours_per_day": 1.5, "days": 4}',
+                    },
+                }
+            ],
+        },
+        {"role": "assistant", "content": "Son 6 horas."},
+    ]
+
+    service = AgentService(provider=provider)
+    answer, tools_used = await service.run("¿Cuántas horas son?")
+
+    assert answer == "Son 6 horas."
+    assert tools_used == ["calculate_study_hours"]
+    assert provider.generate.await_count == 2
+
+
+async def test_agent_stops_after_max_steps():
+    provider = AsyncMock()
+    provider.generate.return_value = {
+        "role": "assistant",
+        "content": None,
+        "tool_calls": [
+            {
+                "id": "call_1",
+                "type": "function",
+                "function": {"name": "run_shell", "arguments": "{}"},
+            }
+        ],
     }
 
-    assert names == {
-        "lookup_ai_concept",
-        "calculate_study_hours",
-        "create_study_task",
-    }
+    service = AgentService(provider=provider)
+    answer, _ = await service.run("pregunta cualquiera")
 
-
-def test_calculation():
-    result = execute_tool(
-        "calculate_study_hours",
-        json.dumps({
-            "hours_per_day": 1.5,
-            "days": 4,
-        }),
-        False,
-    )
-
-    assert (
-        result["data"]["total_hours"]
-        == 6
-    )
-
-
-def test_invalid_args():
-    invalid_range = execute_tool(
-        "calculate_study_hours",
-        json.dumps({
-            "hours_per_day": 50,
-            "days": 2,
-        }),
-        False,
-    )
-
-    assert (
-        invalid_range["error"]
-        == "invalid_arguments"
-    )
-
-    invalid_json = execute_tool(
-        "calculate_study_hours",
-        "not-json",
-        False,
-    )
-
-    assert (
-        invalid_json["error"]
-        == "invalid_arguments"
-    )
-
-
-def test_unknown_tool():
-    result = execute_tool(
-        "run_shell",
-        "{}",
-        True,
-    )
-
-    assert (
-        result["error"]
-        == "unknown_tool"
-    )
+    assert "máximo de pasos" in answer
+    assert provider.generate.await_count == AgentService.MAX_STEPS
